@@ -1,10 +1,15 @@
 import logging
 import re
 from pathlib import Path
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from html import escape
+import mistune
 
 from aiogram import F, Router
 from aiogram.types import FSInputFile, Message
 from openai import AsyncOpenAI
+from aiogram.enums import ParseMode
 
 from config_reader import config
 
@@ -48,6 +53,12 @@ async def handle_messages(message: Message):
             cached_gif_id = sent_msg.animation.file_id
         return
 
+    if "врем" in msg_nospaces:
+        return await message.reply(f"Сейчас {datetime.now(ZoneInfo("Europe/Moscow")).strftime("%H:%M")} по Московскому времени")
+
+    if "насрал" in msg_nospaces:
+            return await message.reply("Убери")
+
     if ASYAMA_PATTERN.search(text_lower):
         await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
 
@@ -63,7 +74,13 @@ async def handle_messages(message: Message):
             )
 
             answer = response.choices[0].message.content
-            await message.reply(answer, parse_mode="")
+
+            answer = markdown_to_telegram_html(answer)
+
+            await message.reply(
+                answer,
+                parse_mode=ParseMode.HTML
+            )
 
         except Exception as e:
             logger.error("Ошибка при запросе к Groq API: %s", e, exc_info=True)
@@ -94,3 +111,29 @@ async def user_join(message: Message):
             text,
             parse_mode="HTML"
         )
+
+
+md = mistune.create_markdown(
+    escape=False,
+    plugins=[
+        "strikethrough",
+        "url"
+    ]
+)
+
+
+def markdown_to_telegram_html(text: str) -> str:
+    html = md(text)
+
+    html = re.sub(r"<p>(.*?)</p>", r"\1\n\n", html, flags=re.DOTALL)
+
+    html = re.sub(
+        r'<pre><code(?: class="language-(.*?))?">(.*?)</code></pre>',
+        lambda m: (
+            f'<pre>{m.group(2)}</pre>'
+        ),
+        html,
+        flags=re.DOTALL
+    )
+
+    return html.strip()
