@@ -1,0 +1,8 @@
+services:
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    container_name: asyabottg
+    env_file: ".env"
+    network_mode: "host"
