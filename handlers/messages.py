@@ -125,7 +125,7 @@ md = mistune.create_markdown(
 def markdown_to_telegram_html(text: str) -> str:
     html = md(text)
 
-    html = re.sub(r"<p>(.*?)</p>", r"\1\n\n", html, flags=re.DOTALL)
+    html = re.sub(r"<p>(.*?)</p>", r"\1\n", html, flags=re.DOTALL)
 
     html = re.sub(
         r'<pre><code(?: class="language-(.*?))?">(.*?)</code></pre>',
