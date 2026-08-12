@@ -5,6 +5,8 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from html import escape
 import mistune
+import deque
+import defaultdict
 
 from aiogram import F, Router
 from aiogram.types import FSInputFile, Message
@@ -36,6 +38,7 @@ SYSTEM_PROMPT = """Ты — Ася, онлайн-репетитор по рус�
 
 ASYAMA_PATTERN = re.compile(r'\b(ас[яюеи]|аськ[ауеи]|асей|ась)\b', re.IGNORECASE)
 
+user_memory = defaultdict(lambda: deque(maxlen=10))
 
 @router.message(F.text)
 async def handle_messages(message: Message):
@@ -62,23 +65,26 @@ async def handle_messages(message: Message):
     if ASYAMA_PATTERN.search(text_lower):
         await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
 
+        history = user_memory[message.from_user.id]
+        history.append({"role": "user", "content" : text})
+        messages_to_send = [{"role": "system", "content": SYSTEM_PROMPT}] + list(history)
+        
         try:
             response = await llm_client.chat.completions.create(
                 model="llama-3.1-8b-instant",
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": text}
-                ],
+                messages=messages_to_send,
                 max_tokens=300,
                 temperature=0.85
             )
 
             answer = response.choices[0].message.content
 
-            answer = markdown_to_telegram_html(answer)
+            history.append("role": "assistant", "content": answer)
+            
+            answer_formatted = markdown_to_telegram_html(answer)
 
             await message.reply(
-                answer,
+                answer_formatted,
                 parse_mode=ParseMode.HTML
             )
 
