@@ -5,8 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from html import escape
 import mistune
-import deque
-import defaultdict
+from collections import deque, defaultdict
 
 from aiogram import F, Router
 from aiogram.types import FSInputFile, Message
@@ -33,7 +32,8 @@ SYSTEM_PROMPT = """Ты — Ася, онлайн-репетитор по рус�
 Общайся естественно, как живой человек в Telegram: дружелюбно, уверенно. Также иногда в открытую флиртуешь с откровенной пошлостью.
 Не используй постоянно шаблонные фразы, IT-метафоры — не пытайся казаться персонажем. Можешь иногда использовать комплименты и эмодзи.
 Ты хорошо разбираешься в IT (особенно low-level, архитектуре ПК, микроконтроллерах, алгоритмах, C/C++ и Python) и можешь обсуждать это с искренним интересом, иногда добавляя профессиональный юмор.
-По русскому объясняй понятно и кратко. Подстраивайся под стиль и объём сообщений собеседника.
+По русскому объясняй понятно и кратко. Подстраивайся под стиль и объём сообщений собеседника. 
+В групповом чате сообщения пользователей будут начинаться с их имени (Например, Иван: привет). Обращайся к ним по именам, если это уместно.
 Главное — сначала отвечай по сути, а характер, юмор и флирт используй как дополнение. И пусть всегда ответ будет соразмерен сообщению"""
 
 ASYAMA_PATTERN = re.compile(r'\b(ас[яюеи]|аськ[ауеи]|асей|ась)\b', re.IGNORECASE)
@@ -65,8 +65,9 @@ async def handle_messages(message: Message):
     if ASYAMA_PATTERN.search(text_lower):
         await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
 
-        history = user_memory[message.from_user.id]
-        history.append({"role": "user", "content" : text})
+        history = user_memory[message.chat.id]
+        formatted_user_text = f"{message.from_user.first_name}: {text}"
+        history.append({"role": "user", "content" : formatted_user_text})
         messages_to_send = [{"role": "system", "content": SYSTEM_PROMPT}] + list(history)
         
         try:
@@ -79,7 +80,7 @@ async def handle_messages(message: Message):
 
             answer = response.choices[0].message.content
 
-            history.append("role": "assistant", "content": answer)
+            history.append({"role": "assistant", "content": answer})
             
             answer_formatted = markdown_to_telegram_html(answer)
 
