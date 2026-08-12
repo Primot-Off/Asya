@@ -38,7 +38,7 @@ SYSTEM_PROMPT = """Ты — Ася, онлайн-репетитор по рус�
 
 ASYAMA_PATTERN = re.compile(r'\b(ас[яюеи]|аськ[ауеи]|асей|ась)\b', re.IGNORECASE)
 
-user_memory = defaultdict(lambda: deque(maxlen=10))
+user_memory = defaultdict(lambda: deque(maxlen=10)) # Больше maxlen - больше память.
 
 @router.message(F.text)
 async def handle_messages(message: Message):
