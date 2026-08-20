@@ -78,7 +78,7 @@ async def handle_messages(message: Message):
             response = await llm_client.chat.completions.create(
                 model="gemini-3.6-flash",
                 messages=messages_to_send,
-                max_tokens=1000,
+                max_tokens=1000, # если сообщения обрезаются - сделать больше.
                 temperature=0.85
             )
             logger.info("Finish reason: %s", response.choices[0].finish_reason)
